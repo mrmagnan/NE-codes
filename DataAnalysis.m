@@ -1,4 +1,4 @@
-% NE 403 data analysis, lab 2, heat conductiom
+% NE 403 data analysis, lab 2, heat conduction
 % Code by Declan Miller
 
 close all
