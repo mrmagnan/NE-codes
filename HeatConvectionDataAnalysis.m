@@ -2,6 +2,10 @@
 % March 2022
 % Code by Declan Miller
 
+% NOTE: Requires data sheet (excel) 'Lab3TableOneValues.xlsx' in order to run.
+% This data sheet simply corresponds to the values given for experiment D in the given data sheet.
+% However, the sheet has been modified, in order to make it more easily readable in matlab.
+
 clc; clear;
 Tab1=table2array(readtable('Lab3TableOneValues.xlsx'));
 
