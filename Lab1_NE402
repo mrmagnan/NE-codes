@@ -1,3 +1,5 @@
+% File doesn't work if you don't have the correct files in the directory
+
 clear;clc; close all;
 warning('off','all');
 Data=table2cell(readtable('lab1_data_allgroups.xlsx'));
