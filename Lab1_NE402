@@ -1,0 +1,511 @@
+clear;clc; close all;
+warning('off','all');
+Data=table2cell(readtable('lab1_data_allgroups.xlsx'));
+Data=Data(:,1:6);
+
+H=height(Data);
+j=1;
+k=1;
+vData={};
+hData={};
+Data(:,6)=lower(Data(:,6));
+
+for i=1:H
+    Data{i,2}=convertCharsToStrings(Data{i,2});
+    if Data{i,2} == "Vertical"
+        vData(j,:)=Data(i,:);
+        j=j+1;
+    else
+        hData(k,:)=Data(i,:);
+        k=k+1;
+    end
+end
+
+% Vertical
+
+H=height(vData);
+vbub={};
+vslug={};
+vchurn={};
+vann={};
+vboundary={};
+
+j=1;
+k=1;
+l=1;
+m=1;
+n=1;
+
+% data sorting
+for i=1:H
+    vData{i,6}=convertCharsToStrings(vData{i,6});
+    if vData{i,6} == "slug"
+        vslug(j,:)=vData(i,:);
+        j=j+1;
+    elseif vData{i,6} == "slugs";
+        vslug(j,:)=vData(i,:);
+        j=j+1;
+        vslug{j-1,6}="slug";
+    elseif vData{i,6} == "bubbly";
+        vbub(k,:)=vData(i,:);
+        k=k+1;
+    elseif vData{i,6} == "churn"
+        vchurn(l,:)=vData(i,:);
+        l=l+1;
+    elseif vData{i,6} == "churning";
+        vchurn(l,:)=vData(i,:);
+        l=l+1;
+        vchurn{l-1,6}="churn";
+    elseif vData{i,6} == "churn-turbulent";
+        vchurn(l,:)=vData(i,:);
+        l=l+1;
+          vchurn{l-1,6}="churn";
+    elseif vData{i,6} == "churn-turbulant";
+        vchurn(l,:)=vData(i,:);
+        l=l+1;
+          vchurn{l-1,6}="churn";
+    elseif vData{i,6} == "churn turbulent";
+        vchurn(l,:)=vData(i,:);
+        l=l+1;
+          vchurn{l-1,6}="churn";
+    elseif vData{i,6} == "annular"
+        vann(n,:)=vData(i,:);
+        n=n+1;
+    else;
+        vboundary(m,:)=vData(i,:);
+        m=m+1;
+    end
+end
+
+
+
+% Horizontal
+H=height(hData);
+hbub={};
+hslug={};
+hchurn={};
+hann={};
+hboundary={};
+
+j=1;
+k=1;
+l=1;
+m=1;
+n=1;
+
+for i=1:H
+    hData{i,6}=convertCharsToStrings(vData{i,6});
+ 
+    if hData{i,6} == "slug"
+        hslug(j,:)=hData(i,:);
+        j=j+1;
+    elseif hData{i,6} == "slugs";
+        hslug(j,:)=hData(i,:);
+        j=j+1;
+        hslug{j-1,6}="slug";
+    elseif hData{i,6} == "bubbly";
+        hbub(k,:)=hData(i,:);
+        k=k+1;
+    elseif hData{i,6} == "churn"
+        hchurn(l,:)=hData(i,:);
+        l=l+1;
+    elseif hData{i,6} == "churning";
+        hchurn(l,:)=hData(i,:);
+        l=l+1;
+        hchurn{l-1,6}="churn";
+    elseif hData{i,6} == "churn-turbulent";
+        hchurn(l,:)=hData(i,:);
+        l=l+1;
+         hchurn{l-1,6}="churn";
+    elseif hData{i,6} == "churn-turbulant";
+        hchurn(l,:)=hData(i,:);
+        l=l+1;
+         hchurn{l-1,6}="churn";
+    elseif hData{i,6} == "churn turbulent";
+        hchurn(l,:)=hData(i,:);
+        l=l+1;
+         hchurn{l-1,6}="churn";
+    elseif hData{i,6} == "annular"
+        hann(n,:)=hData(i,:);
+        n=n+1;
+    else;
+        hboundary(m,:)=hData(i,:);
+        m=m+1;
+    end
+end
+ 
+% CSV files
+
+group1=readmatrix('group1.csv');
+group1=group1(19:end,2:end);
+
+group2=readmatrix('group2.csv');
+group2=group2(19:end,2:end);
+
+group3=readmatrix('group3.csv');
+group3=group3(19:end,2:end);
+
+group4=readmatrix('group4.csv');
+group4=group4(19:end,2:end);
+
+group5=readmatrix('group5.csv');
+group5=group5(19:end,2:end);
+
+groups={group1 group2 group3 group4 group5};
+% Importing data complete
+vboundary{1,6}="bubbly";
+vboundary{2,6}="annular";
+vboundary{3,6}="annular";
+
+hboundary{1,6}="bubbly";
+hboundary{2,6}="annular";
+hboundary{3,6}="annular";
+
+Vcomp=[vbub;vboundary(1,:);vslug;vchurn;vboundary(2:3,:);vann];
+Hcomp=[hbub;hboundary(1,:);hslug;hchurn;hboundary(2:3,:);hann];
+
+% Getting "real" data from csv files:
+
+% Vertical
+H=height(Vcomp);
+Vreal=Vcomp;
+
+for i=1:H
+    g=Vreal{i,1};
+    t=Vreal{i,3};
+    tsv=1;
+    tsvdone=0;
+    for j=1:height(groups{g});
+        if tsvdone==0;
+            if groups{g}(j,1) > t;
+                tsv=j;
+                tsvdone=1;
+                j=height(groups{g});
+                 
+                if tsv<10   
+                Sair=std(groups{g}(tsv:tsv+20,14));
+                Sh2o=std(groups{g}(tsv:tsv+20,12));    
+                else
+                Sair=std(groups{g}(tsv-10:tsv+10,14));
+                Sh2o=std(groups{g}(tsv-10:tsv+10,12));              
+                end
+            else
+            end
+        else
+        end
+    end
+    Vreal{i,4}=groups{g}(tsv,14);
+    Vreal{i,5}=groups{g}(tsv,12);
+    Vreal{i,7}=Sair;
+    Vreal{i,8}=Sh2o;
+end
+
+
+
+
+
+
+% Horizontal
+H=height(Hcomp);
+Hreal=Hcomp;
+
+for i=1:H
+    g=Hreal{i,1};
+    t=Hreal{i,3};
+    tsv=1;
+    tsvdone=0;
+    for j=1:height(groups{g});
+        if tsvdone==0;
+            if groups{g}(j,1) > t;
+                tsv=j;
+                tsvdone=1;
+                j=height(groups{g});
+                
+                if tsv<10   
+                Sair=(std(log10(groups{g}(tsv:tsv+20,14))));
+                Sh2o=(std(groups{g}(tsv:tsv+20,12)));    
+                else
+                Sair=(std(log10(groups{g}(tsv-10:tsv+10,14))));
+                Sh2o=(std(groups{g}(tsv-10:tsv+10,12)));              
+                end
+            else
+            end
+        else
+        end
+    end
+    Hreal{i,4}=groups{g}(tsv,14);
+    Hreal{i,5}=groups{g}(tsv,12);
+    Hreal{i,7}=Sair;
+    Hreal{i,8}=Sh2o;
+end
+
+Vcomp(:,7:8)=Vreal(:,7:8);
+Hcomp(:,7:8)=Hreal(:,7:8);
+
+
+% Flow regime plot
+Points={Vreal Vcomp Hreal Hcomp};
+
+for f=1:3
+    for p=1:4
+        figure
+        Pl=Points{p};
+        a=1;
+        b=1;
+        c=1;
+        d=1;
+        
+        amy=1;
+        bmy=1;
+        cmy=1;
+        dmy=1;
+       
+        g2L = 3.785;
+        % H2O (GPM)--> fps
+        % Inner diameter of pipe is 0.957 inches
+        D=0.957/12; % feet
+        XS=pi*(D/2)^2; % XSectional area [ft^2]
+        g2f3=0.133681; % gallons to ft3
+        
+        % Velocity table
+        
+        PipeOrientation=string(Pl(:,2));
+        AirFlowVelocity_FtPerMin=cell2mat(Pl(:,4))*g2f3./(g2L*XS);
+        WaterFlowVelocity_FtPerMin=cell2mat(Pl(:,5))*g2f3./(XS);
+        Regime=string(Pl(:,6));
+        tab{p}=table(PipeOrientation,AirFlowVelocity_FtPerMin,WaterFlowVelocity_FtPerMin,Regime);
+        
+        % End of table section
+        
+        ibub=[];
+        islug=[];
+        ichurn=[];
+        iannular=[];
+        
+        iannularmy=[];
+        
+        for i=1:height(Pl);
+            % Superficial velocities conversion
+            
+            % Alpha calculation
+            % Very approximate, just Vg/Vl
+            
+            Vg = Points{p}{i,4}/g2L;
+            Vl = Points{p}{i,5};
+            alph=Vg/(Vl+Vg);
+            alphL=1-alph;
+            
+            % Alternative way to calculate alph
+            
+            % vg=Vg/XS
+            % vl=Vl/XS
+            % rhol=62.4; % lbm/ft3
+            % rhog=0.076; % lbm/ ft3
+            % x=rhog*vg/(vg*rhog+vl*rhol);
+            % alph=1/(1+((1-x)/x)*(rhog/rhol))
+            % alphL=1-alph;
+            
+            % Converting to metric units for that third flow regime map
+            
+            if f==3
+                f2m = 0.3048; % fps to mps
+                rhoh2o=1000; % kg/m3
+                rhoair=0.076; % lbm/ ft^3
+                rhoair=rhoair/2.205*0.0283168; % lbm/ ft^3--> kg/m^3;
+                
+             
+                Points{p}{i,5}=rhoh2o*(Points{p}{i,5}*alphL*g2f3/(XS*60))^2; % H2O j [fps]
+                Points{p}{i,4}=rhoair*(Points{p}{i,4}*alph*g2f3/(XS*g2L*60))^2; % Air j [fps]
+                % Error
+                Points{p}{i,8}=rhoh2o*(Points{p}{i,8}*alphL*g2f3/(XS*60))^2; % H2O j [fps]
+                Points{p}{i,7}=rhoair*(Points{p}{i,7}*alph*g2f3/(XS*g2L*60))^2; % Air j [fps]
+                
+                
+            else 
+                % Other two flow regime maps
+                
+                Points{p}{i,5}=Points{p}{i,5}*alphL*g2f3/(XS*60); % H2O j [fps]
+                Points{p}{i,4}=Points{p}{i,4}*alph*g2f3/(XS*g2L*60); % Air j [fps]
+                % Error
+                Points{p}{i,8}=Points{p}{i,8}*alphL*g2f3/(XS*60); % H2O j [fps]
+                Points{p}{i,7}=Points{p}{i,7}*alph*g2f3/(XS*g2L*60); % Air j [fps]
+            end
+            
+            Pl=Points{p};
+            
+            % Distinguising data points collected by my group from those
+            % collected by other groups
+            
+            if Points{p}{i,1} ==3 % my group
+                
+                if Pl{i,6} == "bubbly"
+                    ibubmy(amy)=i;
+                    amy=amy+1;
+                elseif Pl{i,6} == "slug"
+                    islugmy(bmy)=i;
+                    bmy=bmy+1;
+                elseif Pl{i,6} == "churn"
+                    ichurnmy(cmy)=i;
+                    cmy=cmy+1;
+                elseif Pl{i,6} == "annular"
+                    iannularmy(dmy)=i;
+                    dmy=dmy+1;
+                else
+                end
+                
+            else
+                % other groups
+                if Pl{i,6} == "bubbly"
+                    ibub(a)=i;
+                    a=a+1;
+                elseif Pl{i,6} == "slug"
+                    islug(b)=i;
+                    b=b+1;
+                elseif Pl{i,6} == "churn"
+                    ichurn(c)=i;
+                    c=c+1;
+                elseif Pl{i,6} == "annular"
+                    iannular(d)=i;
+                    d=d+1;
+                else
+                end
+            end
+        end
+        
+        % Compiling points for plotting
+        % other groups
+        
+        bubHyd=cell2mat(Pl(ibub,5));
+        bubAir=cell2mat(Pl(ibub,4));
+        bubHydErr=1.96.*cell2mat(Pl(ibub,8));
+        bubAirErr=1.96.*cell2mat(Pl(ibub,7));
+        
+        slugHyd=cell2mat(Pl(islug,5));
+        slugAir=cell2mat(Pl(islug,4));
+        slugHydErr=1.96.*cell2mat(Pl(islug,8));
+        slugAirErr=1.96.*cell2mat(Pl(islug,7));
+        
+        churnHyd=cell2mat(Pl(ichurn,5));
+        churnAir=cell2mat(Pl(ichurn,4));
+        churnHydErr=1.96.*cell2mat(Pl(ichurn,8));
+        churnAirErr=1.96.*cell2mat(Pl(ichurn,7));
+        
+        annHyd=cell2mat(Pl(iannular,5));
+        annAir=cell2mat(Pl(iannular,4));
+        annHydErr=1.96.*cell2mat(Pl(iannular,8));
+        annAirErr=1.96.*cell2mat(Pl(iannular,7));
+        
+        % My group
+        
+        bubHydmy=cell2mat(Pl(ibubmy,5));
+        bubAirmy=cell2mat(Pl(ibubmy,4));
+        bubHydErrmy=1.96.*cell2mat(Pl(ibubmy,8));
+        bubAirErrmy=1.96.*cell2mat(Pl(ibubmy,7));
+        
+        slugHydmy=cell2mat(Pl(islugmy,5));
+        slugAirmy=cell2mat(Pl(islugmy,4));
+        slugHydErrmy=1.96.*cell2mat(Pl(islugmy,8));
+        slugAirErrmy=1.96.*cell2mat(Pl(islugmy,7));
+        
+        churnHydmy=cell2mat(Pl(ichurnmy,5));
+        churnAirmy=cell2mat(Pl(ichurnmy,4));
+        churnHydErrmy=1.96.*cell2mat(Pl(ichurnmy,8));
+        churnAirErrmy=1.96.*cell2mat(Pl(ichurnmy,7));
+        
+        if isempty(iannularmy)~=0;
+        annHydmy=cell2mat(Pl(iannularmy,5));
+        annAirmy=cell2mat(Pl(iannularmy,4));
+        annHydErrmy=1.96.*cell2mat(Pl(iannularmy,8));
+        annAirErrmy=1.96.*cell2mat(Pl(iannularmy,7));
+        end
+        
+        
+        hold on
+        
+        if f==1
+            % plot 1
+            
+            % other groups
+            errorbar(bubHyd,bubAir,bubAirErr,'bo');
+            errorbar(slugHyd,slugAir,slugAirErr,'g>');
+            errorbar(churnHyd,churnAir,churnAirErr,'mh');
+            errorbar(annHyd,annAir,annAirErr,'k*');
+            
+            % my group
+            errorbar(bubHydmy,bubAirmy,bubAirErrmy,'bo','MarkerFaceColor','b');
+            errorbar(slugHydmy,slugAirmy,slugAirErrmy,'g>','MarkerFaceColor','g');
+            errorbar(churnHydmy,churnAirmy,churnAirErrmy,'mh','MarkerFaceColor','m');
+            if isempty(iannularmy)~=0;
+            errorbar(annHydmy,annAirmy,annAirErrmy,'k*','MarkerFaceColor','r');
+            end
+            
+            xlabel('Water superficial velocity (fps)');
+            ylabel('Air superficial velocity (fps)');
+            %xlim([0.1 100]);
+            %ylim([1 1000]);
+            
+        elseif f==2
+            % plot 2
+            
+            % other groups
+            errorbar(bubAir,bubHyd,bubHydErr,'bo');
+            errorbar(slugAir,slugHyd,slugHydErr,'g>');
+            errorbar(churnAir,churnHyd,churnHydErr,'mh');
+            errorbar(annAir,annHyd,annHydErr,'k*');
+                        
+            % my group
+            errorbar(bubAirmy,bubHydmy,bubHydErrmy,'bo','MarkerFaceColor','b');
+            errorbar(slugAirmy,slugHydmy,slugHydErrmy,'g>','MarkerFaceColor','g');
+            errorbar(churnAirmy,churnHydmy,churnHydErrmy,'mh','MarkerFaceColor','m');
+            if isempty(iannularmy)~=0;
+            errorbar(annAirmy,annHydmy,annHydErrmy,'k*','MarkerFaceColor','k');
+            end
+            
+            xlabel('Air superficial velocity (fps)');
+            ylabel('Water superficial velocity (fps)');
+        
+            %xlim([0.1 500]);
+            %ylim([0.01 10]);
+            
+        else
+            % plot 3
+            
+            % other groups
+            errorbar(bubHyd,bubAir,bubAirErr,'bo');
+            errorbar(slugHyd,slugAir,slugAirErr,'g>');
+            errorbar(churnHyd,churnAir,churnAirErr,'mh');
+            errorbar(annHyd,annAir,annAirErr,'k*');
+            
+            % my group
+            errorbar(bubHydmy,bubAirmy,bubAirErrmy,'bo','MarkerFaceColor','b');
+            errorbar(slugHydmy,slugAirmy,slugAirErrmy,'g>','MarkerFaceColor','g');
+            errorbar(churnHydmy,churnAirmy,churnAirErrmy,'mh','MarkerFaceColor','m');
+            if isempty(iannularmy)~=0;
+            errorbar(annHydmy,annAirmy,annAirErrmy,'k*','MarkerFaceColor','k');
+            end
+            
+            xlabel('rho*(superficial water velocity)^2 (kg s^-2 m^-1)');
+            ylabel('rho*(superficial gas velocity)^2 (kg s^-2 m^-1)');
+            %xlim([1 1000000]);
+            %ylim([0.01 1000000]);
+        end
+        
+        
+        
+        if p==1
+            title('Flow Regime; Vertical, reported pts');
+        elseif p==2
+            title('Flow Regime; Vertical, csv');
+        elseif p==3
+            title('Flow Regime; Horizontal, reported pts');
+        else
+            title('Flow Regime; Horizontal, csv');
+        end
+        legend('bubbly','slug','churn','annular');
+        
+        set(gca,'YScale','log');
+        set(gca,'XScale','log');
+        % set(gcf, 'color', 'none');    
+        % set(gca, 'color', 'none');
+    end
+end
