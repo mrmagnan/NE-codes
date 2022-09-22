@@ -1,0 +1,149 @@
+%%
+% NE 301
+% Project 1
+% Declan Miller
+
+% ------ Update 22 SEP 2022 -------
+% This is for inspirational purposes only
+% Not to be plagarized per se
+% Happy hunting!
+% ------ Update concluded ---------
+
+
+%% Introduction
+clear;clc;close all;
+fprintf('Hello there.\nThis code will execute a forward euler numerical approximation for a decay chain/series to the user''s specifications.');
+
+% Notes. Will probably rework this a lot. I put way too much of the
+% main body of the code into a single function, and all-in-all, this has turned
+% out significantly more complex than necessary (and thus inefficient). Will probably make several
+% smaller functions instead, or return most of the code to the main body of
+% the code.
+
+%% inputs.
+
+% Validity loops could be added to inputs. For demonstration purposes,
+% input "number of nuclides" has such a validity loop. Otherwise, it is
+% generally assumed that the user will enter valid inputs.
+
+% number of nuclides in decay chain, with validity loop.
+validity=0; % validate input
+while validity~=1
+    numN=input('\nPlease enter number of nuclides.\n ');
+    if isnumeric(numN)==1; % numeric?
+        if numN-round(numN)==0; % integer?
+            validity=1;
+        end
+    end
+    if validity==0; % not numeric and/or not an integer? Try again.
+        fprintf('Invalid input.\n')
+    end
+end
+validity=0; % resetting value
+
+% Initial values for nuclides, in order
+N0=input('Please enter the initial values for/amount of each nuclide, as a matrix, in the order in whic they appear in the decay chain.\nProper Syntax:[N1 N2 N3] (etc.)\n');
+
+% Time unit to be used (s, m, h, or a.)
+tunit=input('Will the time units be in seconds, minutes, hours, days, or years? Type s, m, h, d, or a, respectively.\n','s');
+fprintf('Note: please ensure that all time inputs are in terms of the chosen unit.\n');
+
+% Half lives, in order, in the given unit
+Th=input('Please enter half lives for each nuclide, as a matrix, in the order in which they appear in the decay chain.\nProper Syntax:[T1 T2 T3] (etc.)\n');
+
+% Starting time
+ts=input('What is the starting time (i.e. t=0 for zero s/m/h/d/a.))\n');
+
+% Ending Time
+te=input('What is the ending time?\n');
+YNQOIerror=0; % initialization to avoid errors
+% QOI Y/N?
+YNQOI=input('Find a quantity of interest (activity)? 1=yes, 0=no. (Type 1 or 0).\n');
+%technically will only read whether or not input is 1
+%(i.e. anything other than one will effectively mean no, not just zero.)
+if YNQOI==1;
+    % >QOI
+    QOInuclide=input('Nuclide of interest? (1 for first nuclide in decay chain, 2 for second, etc.)\n');
+    QOItime=input('Time of interest?');
+    YNQOIerror=input('Save QOI error (analytical solution minus numerical solution)? 1=yes, 2=no.\n');
+    if YNQOIerror==1;
+        QOIanalytic=input('Please input analytical solution to QOI.\n');
+    end
+end
+
+% Number of time steps.
+tn=input('Perform forward Euler with how many time steps?\nTo perform computation repeatedly w/ different time steps, please enter timesteps as an array.\n');
+% Making sure the matrices are column-wise (code is written under this
+% assumption.)
+
+% Activity plotting Y/N?
+YNact=input('Plot activity? 1=yes, 0=no. (Type 1 or 0).\nWarning: this will likely slow down the program.\n');
+% technically will only read whether or not input is 1
+
+sizeTh=size(Th);
+sizeN0=size(N0);
+if sizeTh(1)==1;
+    Th=Th';
+end
+if sizeN0(1)==1;
+    N0=N0';
+end
+
+%% code
+% Initialization of inputs for convenience, when testing code.
+
+% In hindsight QOI could have been solved for simply by adjusting the end
+% of the time interval (te). Might simplify this eventually.
+
+% Part 1: to quickly check values/results for part 1, "uncomment" Line 1,2,3&4 below,
+% and run this section only (bypasses having to enter inputs.)
+% If you want to plot activity, set YNact=1 (instead of YNact=0)
+ %numN=2;Th=[600; 24];N0=[3.6e10;0];tunit='m';ts=0;te=3000; % Line1
+ %tn=[2.56e4;5.12e4;1.024e5;2.048e5;4.048e5;9.096e5;10e5]; % line2 
+ %YNact=0; YNQOI=1; % Line3
+ %QOInuclide=2;QOItime=300;YNQOIerror=1;QOIanalytic=510426; % Line4
+
+% Part 2: to quickly check values/results for part 1, "uncomment" Line 1,2,3&4,
+% and run this section only (bypasses having to enter inputs.)
+% If you want to plot activity, set YNact=1 (instead of YNact=0)
+% Note that Line4 is irrelevant if YNQOI=0
+ %numN=7;Th =[1e9;2;2;500;1000;1600;1];N0 = [1.25e22;0;0;0;0;0;0]; % Line1
+ %ts=0; te=2000; tunit='a'; YNact=1; YNQOI=1; % Line2
+ %tn= [ 1e7]; % Line3
+ %QOInuclide=7;QOItime=2000;YNQOIerror=0;QOIanalytic=0; % Line4
+
+% Calling function to actually perform approximation/computation. Will
+% probably rework this in the future.
+numcalc=length(tn);
+for i=1:numcalc
+    if YNQOI==1
+        if YNQOIerror==1 % logging QOI error
+            [A N QOI]=DecayChain(numN,Th,N0,tunit,ts,te,tn(i),0,YNQOI,QOInuclide,QOItime,YNQOIerror,QOIanalytic);
+            QOIs(i,1:3)=QOI(1:end); % not currently preallocated, may do so eventually.
+        else % don't save QOI error
+            [A N QOI]=DecayChain(numN,Th,N0,tunit,ts,te,tn(i),0,YNQOI,QOInuclide,QOItime);
+            QOIs(i,:)=QOI(1:end); % not preallocated.
+        end
+    else % no QOI
+        [A N QOI]=DecayChain(numN,Th,N0,tunit,ts,te,tn(i),0,YNQOI);
+    end
+end
+if YNact==1 % Plotting.
+    [z ze]=DecayChain(numN,Th,N0,tunit,ts,te,tn(1),1,0); % outputs are irrelevant. This is for the activity plot.
+end
+% Plotting the QOI error (or not.)
+if YNQOIerror==1;
+    YNplotQOIerror=input('Generate plot of QOI error versus time step size? 1=yes, 0=no.\n');
+    if YNplotQOIerror==1;
+        QOIerrorplot(QOIs);
+    end
+end
+
+for i=1:numN;
+    Ns(1,i)=i;
+end
+A=A';
+fprintf('Nuclide || Activity (Bq) at t = %d %s:\n',te,tunit);
+fprintf('    %d             %.2f\n', [Ns; A]);
+fprintf('\nOutput file "DecayChain.txt" generated.\n\n')
+fprintf('\nProgram Complete.\n');
