@@ -1,0 +1,90 @@
+clear;clc;close all;
+
+% Declan Miller
+% Lab 2, NE 402
+% SEP 2022
+% Need data file 'Lab_2_data.xlsx' in same directory
+
+
+Data=readmatrix('Lab_2_data.xlsx');
+DataT=readtable('Lab_2_data.xlsx');
+DataT.Properties.VariableNames={'Data Point','Group','Pressure [+/- 5 kPa]','Power [+/- 2 W]','Saturation Temperature [+/- 2 C]','Wall Temperature [+/- 2 C]','Machine','nothing','Rewet Pressure','Rewet Power','Machine_'};
+
+% Surface fitting
+
+T_sat=Data(:,5);
+T_wall=Data(:,6);
+prePressure=Data(:,3);
+Power=Data(:,4);
+
+preTdiff=T_wall-T_sat;
+SA=20*0.01^2; % 20 cm^2 surface area --> SA in m^2
+preHeatFlux=Power*SA; % Power times Surface area
+j=1;
+
+Tdiff=[];
+Pressure=[];
+HeatFlux=[];
+breakp=[];
+g=1;
+for i=1:length(Data);
+    if isnan(preTdiff(i,1))==0
+        if preTdiff(i)>0
+            Tdiff(j,1)=    preTdiff(i);
+            Pressure(j,1)= prePressure(i);
+            HeatFlux(j,1)= preHeatFlux(i);
+            j=j+1;
+        else
+            
+        end
+    else
+        breakp(g)=i;
+        g=g+1;
+    end
+end
+
+LNheatflux=log(HeatFlux);
+
+% Table generation
+
+% which trials do you want?
+wanted=[5 6 7 9]; % imo pressure is most consistent for these trials
+trialdata={};
+
+for w=1:length(wanted)
+    trial=wanted(w);
+    if trial==1
+        beg=1;
+    else
+        beg=breakp(trial-1)+1;
+    end
+    ending=breakp(trial);
+    trialdata{w}=DataT(beg:ending,1:7);
+end
+
+% Plotting CHF/Rewet Power vs Pressure
+
+PressCHF=Data(breakp,3);
+PowerCHF=Data(breakp,4);
+PressRWP=[80;55;105;59;105;70;98;82];
+PowerRWP=[50;136;40;185;40;185;220;215];
+
+scatter(PressCHF,PowerCHF);
+axis([0 max(PressCHF)+5 0 max(PowerCHF)+50]);
+
+xlabel('CHF Pressure [kPa]');
+ylabel('CHF Power [W]');
+title('CHF Power [W] vs. CHF Pressure[kPa]');
+
+mdl1 = fitlm(PressCHF,PowerCHF)
+
+figure
+
+scatter(PressRWP,PowerRWP);
+axis([0 max(PressRWP)+5 0 max(PowerRWP)+25]);
+
+xlabel('Rewet Pressure [kPa]');
+ylabel('Rewet Power [W]');
+title('Rewet Power [W] vs. Rewet Pressure[kPa]');
+
+mdl2 = fitlm(PressRWP,PowerRWP)
