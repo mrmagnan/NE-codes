@@ -1,0 +1,83 @@
+% lab 3, NE 402
+% Need data sheet in same directory
+
+clc;clear;close all;
+% Straight pipe sections
+S=[1 12 4 8 16];
+d=0.001*[17 23 6.5 16.5 26.5];
+index=1;
+mu=0.0009737; % Water dynamic viscosity @70 F, in Pa*s
+m=1;
+
+
+for j=S;
+    mat=readmatrix('lab3_fall2022.xlsx','Sheet',j);
+    
+    d_in=d(index);
+    L=39*0.0254;
+    rho=1000;
+    gal2m3=0.00378541;
+    A=d_in^2/2;
+    
+    for i=1:length(mat)
+       
+        v=mat(i,9)*gal2m3/(A*60);
+        if v==0
+        v=0.01; % just to avoid errors    
+        end
+        dP=mat(i,8)*6894.76;
+        f(i)=dP/((L/d_in)*rho*v^2/2);
+        
+        % Reynolds number calculation
+        Re(i)=rho*v*L/mu;
+        
+        if f(i)>=0
+         eps(m)=3.7*d_in*2.718^(sqrt(0.25/f(i))-5.74/Re(i)^0.9); ;
+        m=m+1;
+        
+        end
+        
+        
+    end
+plot(Re,f);
+hold on
+F(index)=mean(f);
+Eps(index)=mean(eps);
+RE(index)=mean(Re);
+m=1;
+eps=zeros;
+index=index+1;
+f=zeros;
+Re=zeros;
+end
+xlabel('Reynolds Number');
+ylabel('Friction Factor');
+title('Friction Factor vs Reynolds Number');
+legend('2','3','4','5','6');
+
+
+index=1;
+for j=2:3;
+    matForm=readmatrix('lab3_fall2022.xlsx','Sheet',j);
+    
+    d_in=0.017;
+    L=39*0.0254;
+    rho=1000;
+    gal2m3=0.00378541;
+    A=d_in^2/2;
+    
+    % form losses
+    for i=1:length(matForm)
+        v=mat(i,9)*gal2m3/(A*60);
+        if v==0
+            v=0.01; % just to avoid errors
+        end
+        dP=matForm(i,8)*6894.76;
+        k(i)=dP*2/(rho*v^2);
+    end
+    K(index)=mean(k);
+    index=index+1;
+    k=zeros;
+end
+
+
