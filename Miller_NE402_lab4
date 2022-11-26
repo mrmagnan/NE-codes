@@ -1,0 +1,91 @@
+clc;clear;close all;
+
+% channel parameters
+in2cm=2.54;
+Ax=0.1422*in2cm^2;
+d0=0.3832*in2cm;
+
+dT34=[];
+dT56=[];
+dT78=[];
+dT12=[];
+
+for j=2:11;
+
+% resetting stuff
+delta34=[];
+delta56=[];
+delta78=[];
+delta12=[];
+
+if j==4
+    % on the Qdot=80 kW sheet there's +1 blank column.
+    offset=1;
+else
+    offset=0;
+end
+mat=readmatrix('LabData_NE402_2022-11-15.xlsx','Sheet',j);
+delta34=mat(:,12+offset);
+delta56=mat(:,13+offset);
+delta78=mat(:,14+offset);
+delta12=mat(:,15+offset);
+
+dT34(j-1,1)=mean(delta34);
+dT56(j-1,1)=mean(delta56);
+dT78(j-1,1)=mean(delta78);
+dT12(j-1,1)=mean(delta12);
+
+end
+
+% dTav=
+dTav_mat=[dT34 dT56 dT78 dT12]';
+dTav=mean(dTav_mat)';
+
+Qdot=[100 90 80 70 60 50 40 30 20 10];
+Qdot=Qdot';
+
+% fits with "goodness of fit" statistics
+
+% Equation of the first form
+eqn1_0 = fittype('K_0*Q^((2-0)/(3-0))','independent','Q');
+eqn1_020 = fittype('K_0*Q^((2-0.2)/(3-0.2))','independent','Q');
+eqn1_025 = fittype('K_0*Q^((2-0.25)/(3-0.25))','independent','Q');
+eqn1_1 = fittype('K_0*Q^((2-1)/(3-1))','independent','Q');
+
+[form1_0 gof1_0]=fit(Qdot,dTav,eqn1_0);
+[form1_020 gof1_020]=fit(Qdot,dTav,eqn1_020);
+[form1_025 gof1_025]=fit(Qdot,dTav,eqn1_025);
+[form1_1 gof1_1]=fit(Qdot,dTav,eqn1_1);
+
+Form1=[coeffvalues(form1_0);coeffvalues(form1_020);coeffvalues(form1_025);coeffvalues(form1_1)];
+R2_form1=[gof1_0.rsquare; gof1_020.rsquare; gof1_025.rsquare; gof1_1.rsquare];
+
+C_p=4.2; % kJ/(kg*C)
+dTavC=dTav*5/9;
+mflo=Qdot./(dTavC*C_p); % kg/s
+mu=0.000682; % Pa/s
+Re=mflo*d0/(mu*Ax);
+
+%[form1_34 gof1_34]=fit(Qdot,dT34,eqn1);
+%[form1_56 gof1_56]=fit(Qdot,dT56,eqn1);
+%[form1_78 gof1_78]=fit(Qdot,dT78,eqn1);
+%[form1_12 gof1_12]=fit(Qdot,dT12,eqn1);
+
+% Equation of the general form
+eqn2 = fittype('K_1*Q^n','independent','Q');
+[form2 gof2]=fit(Qdot,dTav,eqn2);
+Form2var=coeffvalues(form2);
+R2_form2=[gof2.rsquare];
+
+%[form2_34 gof2_34]=fit(Qdot,dT34,eqn2);
+%[form2_56 gof2_56]=fit(Qdot,dT56,eqn2);
+%[form2_78 gof2_78]=fit(Qdot,dT78,eqn2);
+%[form2_12 gof2_12]=fit(Qdot,dT12,eqn2);
+
+% Extracting values
+%Form1=[coeffvalues(form1_34);coeffvalues(form1_56);coeffvalues(form1_78);coeffvalues(form1_12)];
+%R2_form1=[gof1_34.rsquare; gof1_56.rsquare; gof1_78.rsquare; gof1_12.rsquare];
+
+%Form2=[coeffvalues(form2_34);coeffvalues(form2_56);coeffvalues(form2_78);coeffvalues(form2_12)];
+%R2_form2=[gof2_34.rsquare; gof2_56.rsquare; gof2_78.rsquare; gof2_12.rsquare];
+
