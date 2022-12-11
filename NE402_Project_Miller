@@ -1,0 +1,382 @@
+% Declan Miller
+% NE 402 project
+
+% This is the third rewrite of my code.
+% This one seems to work "decently", but that doesn't mean the values aren't off.
+% This one might not be commented super great in all sections b/c of
+% cutting and pasting from my previous 2 drafts.
+%%
+% Compute pump dP to satisfy CPR and Qmelt/Q requirements with parameters:
+
+clc;clear;
+
+Q=3976; % MW
+Q=Q*3412141.6; % Btu/hr
+gamma=0.974;
+P=1040;
+T_in=410;
+Fq=3.15;
+Fz=1.45;
+Hc=176/12; % remember it's canned tho
+can=5.52/12; % 5.52 x 5.52 inches dimensions
+Do=0.4039/12;
+Di=0.3441/12;
+Df=0.3386/12;
+S=0.5098/12;
+kclad=9.6;
+Hg=1200;
+NumAss=872;
+RodsPerAss=92;
+
+g=32.2;
+gc=32.2*3600^2;
+
+NumRods=NumAss*RodsPerAss;
+
+NumGrids=8;
+Kgrid=0.6;
+K_in=1.5;
+K_exit=1.0;
+K_dc=2.5;
+D_cb=184/12;
+D_Vessel=280/12;
+Hch=12;
+
+% Precision
+prc=6;
+
+syms Gc
+
+qavg=gamma*Q/(2*pi*NumAss*RodsPerAss*Hc*Do/2);
+qmax_av=qavg*Fz;
+qhot_max=qavg*Fq;
+
+syms z lambd
+Hl=Hc+2*lambd;
+
+Z=pi*((Hc-z+lambd)/Hl)*sin(pi*(Hc-z+lambd)/Hl);
+% finding lambda --> reference HW4 solution here.
+syms var1
+% initial parameter given to avoid xmax=0 answer.
+xmax=vpa(vpasolve(-sin(var1)==var1*cos(var1),var1,2),prc);
+% Fz = qmax/qavg
+eqn_lambda=Fz==xmax*sin(xmax)/((1/Hc)*int(Z,z,0,Hc));
+lambda=vpa(vpasolve(eqn_lambda,lambd),prc);
+
+maxqpr=xmax==pi*((Hc-z+lambda)/(Hc+2*lambda));
+maxZ=vpasolve(maxqpr,prc); % z location of max q
+Zl=subs(Z,lambd,lambda);
+
+qavg0=qmax_av/subs(Zl,z,maxZ);
+qhot0=qhot_max/subs(Zl,z,maxZ);
+
+qz_av=vpa(qavg0*subs(Z,lambd,lambda),prc);
+% Enthalpy calculation, also, with feedwater stuff.
+Ax=S^2-(pi*Do^2)/4;
+mflo=Gc*Ax;
+A_dc=(pi/4)*(D_Vessel^2-D_cb^2);
+h_fd=XSteamUS('h_pT',P,T_in);
+h_f=XSteamUS('hL_p',P);
+h_g=XSteamUS('hV_p',P);
+h_fg=h_g-h_f;
+mflo_fd=Q/(h_g-h_fd);
+mflo_c=mflo*NumRods;
+h_in=mflo_fd/mflo_c*h_fd+(1-mflo_fd/mflo_c)*h_f;
+
+syms z2 Ho
+hz=h_in+(1/(mflo*gamma))*int(qz_av,z,0,z2)*pi*Do;
+hz=vpa(subs(hz,z2,z),prc);
+
+H0=vpa(mflo*(h_f-h_in)/(qavg*pi*Do),prc); %
+% basic constants
+rho_f=XSteamUS('rhoL_p',P);
+rho_g=XSteamUS('rhoV_p',P);
+
+% Friction factors and hydraulic diameters, etc.
+%core
+Dlc=4*Ax/(Do*pi);
+mu=8.66*10^(-5)*3600;
+Re=Gc*Dlc/mu;
+fc=0.184*Re^(-0.2);
+% chimney
+Ach=pi*(D_cb/2)^2;
+Dchl=4*Ach/(D_cb*pi);
+Gch=Gc*Ax*NumRods/Ach; % chimney mass flux
+mu=8.66*10^(-5)*3600; % change this later based on exit temp/enthalpy
+Re_ch=Gch*Dchl/mu;
+fch=0.184*Re_ch^(-0.2);
+% downcomer;
+A_dc=(pi/4)*(D_Vessel^2-D_cb^2);
+Ddcl=D_Vessel-D_cb;
+Gdc=Gc*Ax*NumRods/A_dc; % downcomer mass flux
+mu=8.66*10^(-5)*3600; % this should be fine, same as inlet conditions
+Re_dc=Gdc*Ddcl/mu;
+fdc=0.184*Re_dc^(-0.2);
+% all friction factors have been calculated
+
+% Quality
+% For z>H0
+
+x=vpa((hz-h_f)/h_fg,prc);
+
+% 2 phase multiplier
+mu_f=6.24*10^(-5)*3600;
+mu_g=1.29*10^(-5)*3600;
+% Martinelli parameter
+syms qual
+
+% Zuber Findlay correlation
+Co=1.13;
+g=32.2;
+sigma=XSteamUS('st_T',T_in);
+V=1.41*(sigma*g*gc*(rho_f-rho_g)/rho_f^2)^0.25;
+alpha=vpa(1/(Co*(1+(1-x)/x*(rho_g/rho_f))+rho_g*V/(Gc*x)),prc);
+
+% @exit
+x_e=subs(x,z,Hc);
+alph_g=subs(alpha,z,Hc);
+alph_l=1-alph_g;
+
+
+Chi2=(mu_f/mu_g)^0.2*((1-qual)/qual)^1.8*(rho_g/rho_f);
+Phi_lo=(1+20/sqrt(Chi2)+1/Chi2)*(1-qual)^1.8;
+Phi_exit=subs(Phi_lo,qual,x_e);
+Phi_av=subs(Phi_lo,qual,x_e/2);
+
+psi=Phi_av;
+
+alp=vpa(1/(Co*(1+(1-qual)/qual*(rho_g/rho_f))+rho_g*V/(Gc*qual)),prc);
+alpha_av=1/x_e*int(alp,qual,0,x_e);
+alpha_l_av=1-alpha_av;
+Rho_av=rho_g*alpha_av+rho_f*alpha_l_av;
+
+alpch_pre=vpa(1/(Co*(1+(1-qual)/qual*(rho_g/rho_f))+rho_g*V/(Gch*qual)),prc);
+alpch=1/x_e*int(alpch_pre,qual,0,x_e);
+alpch_l=1-alpch;
+Rho_ch=rho_g*alpch+rho_f*alpch_l;
+
+Ks1phase=Kgrid*2+K_in;
+Ks2phase=Kgrid*6+K_exit;
+Hdc=Hch+Hc;
+
+dPacc=Gc^2/gc*((1-x_e)^2/(alph_l*rho_f)+x_e^2/(alph_g*rho_g)-1/rho_f)/144;
+dPfr_core=fc/Dlc*Gc^2/(2*rho_f*gc)*(H0+Phi_av*(Hc-H0))/144;
+dPlocal_core=Gc^2/(2*rho_f*gc)*(Ks1phase+Ks2phase*psi)/144;
+dP_ch=(fch*Hch/Dchl)*(Gch^2/(2*rho_f*gc))*Phi_exit/144;
+dP_dc=(fdc*Hdc/Ddcl+K_dc)*(Gdc^2/(2*rho_f*gc))/144;
+  dPelev_core=(rho_f*g/gc*H0+Rho_av*(Hc-H0)*(g/gc))/144;
+  dPelev_dc=rho_f*Hdc*(g/gc)/144;
+  dPelev_ch=Rho_ch*Hch*(g/gc)/144;
+dPelev=dPelev_core+dPelev_ch-dPelev_dc;
+Pdrop=vpa(dPacc+dPfr_core+dPlocal_core+dP_ch+dP_dc+dPelev,prc);
+
+% Test for reasonableness.
+% TestG=1000000;
+%A=vpa(subs(dPacc,Gc,TestG),prc); % good
+%B=vpa(subs(dPfr_core,Gc,TestG),prc); % good
+%C=vpa(subs(dPlocal_core,Gc,TestG),prc); % good
+%D=vpa(subs(dP_ch,Gc,TestG),prc); % good
+%E=vpa(subs(dP_dc,Gc,TestG),prc); % good
+%F=vpa(subs(dPelev,Gc,TestG),prc); % good
+%G=vpa(subs(Pdrop,Gc,TestG),prc); % good
+%close all
+%fplot(Pdrop);
+% This concludes reasonableness test.
+syms G_hot
+% Guessing game.
+dPpump=10;
+CPRtarg=1.28;
+Tmelt=4890;
+nCPR=0;
+CPRdone=0;
+
+while CPRdone==0
+eqn=Pdrop==dPpump;
+Gcore=vpa(vpasolve(eqn,Gc,1000000),prc);
+h_in_upd=vpa(subs(h_in,Gc,Gcore),prc);
+% find G_hot
+
+mflo_hot=G_hot*Ax;
+qz_hot=vpa(qhot0*subs(Z,lambd,lambda),prc);
+hz_hot=h_in_upd+(1/(mflo_hot*gamma))*int(qz_hot,z,0,z2)*pi*Do;
+hz_hot=vpa(subs(hz_hot,z2,z),prc);
+x_hot=vpa((hz_hot-h_f)/h_fg,prc);
+qhot_av=qhot0/Fz;
+H0_hot=vpa(mflo_hot*(h_f-h_in_upd)/(qhot_av*pi*Do),prc);
+% These ones are already defined
+% Co=1.13;
+% g=32.2;
+% sigma=XSteamUS('st_T',T_in);
+% V=1.41*(sigma*g*gc*(rho_f-rho_g)/rho_f^2)^0.25;
+alpha_hot=vpa(1/(Co*(1+(1-x_hot)/x_hot*(rho_g/rho_f))+rho_g*V/(G_hot*x_hot)),prc);
+% @exit
+x_e_hot=subs(x_hot,z,Hc);
+alph_g_hot=subs(alpha_hot,z,Hc);
+alph_l_hot=1-alph_g_hot;
+alp_hot=vpa(1/(Co*(1+(1-qual)/qual*(rho_g/rho_f))+rho_g*V/(G_hot*qual)),prc);
+alpha_av_hot=1/x_e_hot*int(alp_hot,qual,0,x_e_hot);
+alpha_l_av_hot=1-alpha_av_hot;
+Rho_av_hot=rho_g*alpha_av_hot+rho_f*alpha_l_av_hot;
+
+% Chi=(mu_f/mu_g)^0.2*((1-qual)/qual)^1.8*(rho_g/rho_f);
+% Phi_lo=(1+20/Chi+1/Chi^2)*(1-qual)^1.8;
+Phi_exit_hot=subs(Phi_lo,qual,x_e_hot);
+Phi_av_hot=subs(Phi_lo,qual,x_e_hot/2);
+psi_hot=Phi_av_hot;
+
+fc_hot=subs(fc,Gc,G_hot); % simple enough
+
+dPacc_hot=G_hot^2/gc*((1-x_e_hot)^2/(alph_l_hot*rho_f)+x_e_hot^2/(alph_g_hot*rho_g)-1/rho_f)/144;
+dPfr_core_hot=fc_hot/Dlc*G_hot^2/(2*rho_f*gc)*(H0_hot+Phi_av_hot*(Hc-H0_hot))/144;
+dPlocal_core_hot=G_hot^2/(2*rho_f*gc)*(Ks1phase+Ks2phase*psi_hot)/144;
+dPelev_core_hot=(rho_f*g/gc*H0_hot+Rho_av_hot*(Hc-H0_hot)*(g/gc))/144;
+Pdrop_c=dPacc+dPfr_core+dPlocal_core+dPelev_core;
+Pdrop_core=subs(Pdrop_c,Gc,Gcore);
+Pdrop_core_hot=dPacc_hot+dPfr_core_hot+dPlocal_core_hot+dPelev_core_hot;
+eqnhot=Pdrop_core==Pdrop_core_hot;
+
+% vpasolver isn't working, equation is too long
+% Little iterative equation solver I typed up.
+% Calculate G_hot;
+done=0;
+Gguess=Gcore/2;
+n=0; % attempt #
+while done==0;
+    Pdrop_hot_check=vpa(subs(Pdrop_core_hot,G_hot,Gguess),prc);
+    if Pdrop_hot_check > 2*Pdrop_core;
+        Gguess=Gguess*0.5;
+    elseif Pdrop_hot_check > 1.1*Pdrop_core
+        Gguess=Gguess*0.9;
+    elseif Pdrop_hot_check > 1.01*Pdrop_core
+        Gguess=Gguess*0.99;
+    elseif Pdrop_hot_check < 0.5*Pdrop_core
+        Gguess=Gguess*2;
+    elseif Pdrop_hot_check < 0.9*Pdrop_core
+        Gguess=Gguess*1.1;
+    elseif Pdrop_hot_check < 0.99*Pdrop_core
+        Gguess=Gguess*1.01;
+    else
+        done=1;
+    end
+n=n+1; % attempt #
+
+end
+Ghot=Gguess; % Hot channel mass flux
+
+% Couldn't get my critical heat flux/CPR calculation to work "properly", so
+% I'm fixing h_in for that calculation.
+if nCPR==0
+h_in_crit=h_in_upd;
+%H0_hot_crit=subs(H0_hot,G_hot,Ghot);
+else
+end
+%h_in_crit=h_in_upd;
+H0_hot_crit=subs(H0_hot,G_hot,Ghot);
+qcrit_0=vpa(subs(gamma*mflo_hot*(h_f-h_in_crit)/int(Zl*pi*Do,z,0,H0_hot_crit),G_hot,Ghot),prc);
+CPR=qcrit_0/qhot0;
+ if CPR > 2*CPRtarg;
+        dPpump=dPpump*0.5;
+    elseif CPR > 1.1*CPRtarg
+       dPpump=dPpump*0.9;
+    elseif CPR > 1.01*CPRtarg
+       dPpump=dPpump*0.99;
+    elseif CPR < 0.5*CPRtarg
+        dPpump=dPpump*1.5;
+    elseif CPR < 0.9*CPRtarg
+        dPpump=dPpump*1.15;
+    elseif CPR < CPRtarg
+        dPpump=dPpump*1.02;
+    else
+        CPRdone=1;
+  
+ end
+ dPpump;
+ nCPR=nCPR+1;
+ vpa(CPR);
+end
+
+% Calculating fuel temperature
+% Using nucleate boiling correlation
+% equation implies max T at location of max q''
+% q_crit=q_melt
+Gmelt=Ghot;
+meltdone=0;
+while meltdone==0;
+QmeltR=1.17;
+maxq_mlt=qhot_max*QmeltR; % max q for given QmeltR
+
+% Coolant temp
+aa=subs(hz_hot,G_hot,Gmelt);
+ab=subs(aa,z,maxZ);
+Tbulk=XSteamUS('T_ph',P,ab);
+Tsat=XSteamUS('Tsat_p',P);
+% clad surface temp
+% convective heat transfer coefficent, weisman correlation
+kwater=0.33;
+Cp=1.27;
+C=0.042*(S/Dlc)-0.024;
+Pr=Cp*mu_f/kwater;
+Re_melt=Gmelt*Dlc/mu_f;
+hc=kwater/Dlc*C*Re_melt^0.8*Pr^(1/3);
+
+Ro=Do/2;
+Ri=Di/2;
+Rf=Df/2;
+q3pr=maxq_mlt*Df*pi/(pi*Rf^2);
+% clad surface temp
+%Tco=Tbulk+q3pr*Rf^2/(2*Ro*hc); %+0.072*maxq_mlt^0.5*exp(-P/1260);
+% fuel surface temp
+
+Ts=Tbulk+maxq_mlt*(Ro/(Ri*Hg)+Ro/kclad*log(Ro/Ri)+1/hc);
+% Fuel centerline temp
+syms To
+% q triple prime: volumetric heat generation rate.
+% should be equal to heat flux, times fuel perimeter, divided by fuel XS
+% area.
+
+eqnFuel=3978.1*log((692.61+Ts)/(692.61+To))+(6.02366*10^(-12)/4)*((Ts+460)^4-(To+460)^4)==-q3pr*Rf^2/4;
+To=vpasolve(eqnFuel,4000);
+
+if To > 2*Tmelt;
+        Gmelt=Gmelt*2;
+    elseif To > 1.1*Tmelt
+      Gmelt=Gmelt*1.1;
+    elseif To > 1.01*Tmelt
+      Gmelt=Gmelt*1.01;
+      
+      % For fun, if you want to find G at which fuel melts:
+      %elseif To <0.5*Tmelt
+      %   Gmelt=Gmelt*0.5;
+      %elseif To < 0.9*Tmelt
+      %    Gmelt=Gmelt*0.9;
+      %elseif To < 0.99*Tmelt
+      %  Gmelt=Gmelt*0.985;
+else
+    meltdone=1;
+
+end
+end
+
+% recompute dPpump if necessary
+if Gmelt>1.01*Ghot
+Pdrop_core_hot2=subs(dPacc_hot+dPfr_core_hot+dPlocal_core_hot+dPelev_core_hot,G_hot,Gmelt);
+eqnhot=Pdrop_core==Pdrop_core_hot2;
+Gc2=vpasolve(eqnhot,Gc); % possibility that vpasolve breaks b/c of size of equations.
+% if so, I could just throw in an iterative equation solving loop here. Not
+% terribly complicated, but not worth my time at this exact moment
+Pdrop2=subs(Pdrop,Gc,Gc2);
+Gcore=Gc2;
+Ghot=Gmelt;
+dPpump=Pdrop2;
+elseif Gmelt<0.99*Ghot % repeating same thing:
+Pdrop_core_hot2=subs(dPacc_hot+dPfr_core_hot+dPlocal_core_hot+dPelev_core_hot,G_hot,Gmelt);
+eqnhot=Pdrop_core==Pdrop_core_hot2;
+Gc2=vpasolve(eqnhot,Gc); % possibility that vpasolve breaks b/c of size of equations.
+% if so, I could just throw in an iterative equation solving loop here. Not
+% terribly complicated, but not worth my time at this exact moment
+Pdrop2=subs(Pdrop,Gc,Gc2);    
+Gcore=Gc2;
+Ghot=Gmelt;
+dPpump=Pdrop2;
+else % Don't need to recompute
+end
